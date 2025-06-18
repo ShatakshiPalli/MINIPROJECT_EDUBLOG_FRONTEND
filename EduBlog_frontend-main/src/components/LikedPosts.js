@@ -9,33 +9,59 @@ const LikedPosts = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    
+    
     useEffect(() => {
+        const fetchPost = async (id) => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await axios.get(`http://localhost:8080/api/posts/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                return {
+                    id: response.data.id,
+                    title: response.data.title,
+                    category: response.data.category,
+                    description: response.data.description,
+                    createdAt: response.data.createdAt,
+                    author: response.data.author,
+                };
+            } catch (err) {
+                return {
+                    id: "error",
+                    title: "not found",
+                    author: "not found"
+                };
+            }
+        };
+
         const fetchLikedPosts = async () => {
             if (!user) {
                 setLoading(false);
                 return;
             }
-            
+
             try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get('http://localhost:8080/api/users/liked-posts', {
+                const response = await axios.get(`http://localhost:8080/api/users/liked-list/${user.username}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                setLikedPosts(response.data);
-                setError('');
+                const likedPostIds = response.data.likedPostIds;
 
+                // Fetch all liked posts
+                const posts = await Promise.all(likedPostIds.map(id => fetchPost(id)));
+                setLikedPosts(posts);
+                setLoading(false);
             } catch (err) {
                 console.error('Failed to fetch liked posts', err);
                 setError('Failed to fetch recommendations');
-            } finally{
                 setLoading(false);
             }
         };
 
-        if (user) {
-            fetchLikedPosts();
-        }
+        fetchLikedPosts();
     }, [user]);
+
 
     if (loading) {
         return (
